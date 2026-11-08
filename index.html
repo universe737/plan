@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>우리 가족 실시간 보드</title>
+    <style>
+        :root {
+            --primary: #4a6fa5;
+            --primary-dark: #3b5984;
+            --bg: #f8f9fa;
+            --card-bg: #ffffff;
+            --text: #212529;
+            --text-muted: #6c757d;
+            --border: #e9ecef;
+            --accent-green: #2ecc71;
+            --accent-red: #ee5253;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Segoe UI", Roboto, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            max-width: 480px; /* 모바일 전용 레이아웃 제한 */
+            margin: 0 auto;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 20px rgba(0,0,0,0.05);
+            padding-bottom: 30px;
+        }
+
+        /* 고정 헤더 */
+        header {
+            background-color: var(--primary);
+            color: white;
+            padding: 16px;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .header-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .header-sub {
+            font-size: 0.8rem;
+            opacity: 0.9;
+            margin-top: 4px;
+            background: rgba(0,0,0,0.15);
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+        }
+
+        /* 6명 가족 멤버 스크롤 바 */
+        .member-bar-wrapper {
+            background: #ffffff;
+            border-bottom: 1px solid var(--border);
+            padding: 12px 8px;
+            position: sticky;
+            top: 67px;
+            z-index: 99;
+        }
+
+        .member-bar-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-left: 8px;
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
+
+        .member-bar {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding: 2px 8px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .member-bar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .member-chip {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 58px;
+            cursor: pointer;
+            opacity: 0.5;
+            transition: all 0.2s ease;
+            padding: 6px 4px;
+            border-radius: 14px;
+            border: 2px solid transparent;
+        }
+
+        .member-chip.active {
+            opacity: 1;
+            background-color: #f0f4f9;
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            margin-bottom: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+            background: #fff;
+        }
+
+        .member-name {
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
+        /* 하단 탭 메뉴 (모바일 내비게이션 바 스타일) */
+        nav {
+            display: flex;
+            background: #ffffff;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 12px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 14px 8px;
+            text-align: center;
+            border: none;
+            background: none;
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+            background-color: #fafbfc;
+        }
+
+        /* 메인 콘텐츠 영역 */
+        main {
+            padding: 0 12px;
+            flex: 1;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* 카드 컴포넌트 */
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 14px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .card-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--primary-dark);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* 터치 친화적 폼 요소 */
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        input[type="text"], input[type="time"] {
+            width: 100%;
+            padding: 12px;
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            font-size: 0.95rem;
+            outline: none;
+            background: #fdfdfd;
+            -webkit-appearance: none;
+        }
+
+        input[type="text"]:focus, input[type="time"]:focus {
+            border-color: var(--primary);
+            background: #fff;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 13px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(74, 111, 165, 0.3);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+            background: var(--primary-dark);
+        }
+
+        .btn-sm {
+            padding: 6px 10px;
+            font-size: 0.75rem;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+        }
+
+        /* 일정 목록 (모바일 카드 타임라인 스타일) */
+        .schedule-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background: #fdfdfd;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .schedule-time {
+            font-weight: 800;
+            color: var(--primary);
+            font-size: 1rem;
+            min-width: 58px;
+        }
+
+        .schedule-tag {
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: white;
+            margin-right: 8px;
+            white-space: nowrap;
+        }
+
+        .schedule-title {
+            flex: 1;
+            font-size: 0.9rem;
+            font-weight: 600;
+            word-break: break-all;
+        }
+
+        .delete-btn {
+            color: #ced4da;
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            padding: 4px 8px;
+            cursor: pointer;
+        }
+
+        .delete-btn:active {
+            color: var(--accent-red);
+        }
+
+        /* 살 물건 / 구매 요청 모바일 카드 스타일 */
+        .shopping-item {
+            padding: 14px;
+            background: #ffffff;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            border: 1px solid var(--border);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .shopping-item.ordered {
+            background: #f4fbf7;
+            border-color: #c3e6cb;
+        }
+
+        .shopping-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .shopping-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #212529;
+        }
+
+        .shopping-item.ordered .shopping-title {
+            text-decoration: line-through;
+            color: var(--text-muted);
+        }
+
+        .shopping-meta {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .shopping-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 4px;
+            padding-top: 8px;
+            border-top: 1px dashed var(--border);
+        }
+
+        .status-badge {
+            font-size: 0.78rem;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .status-badge.pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-badge.completed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        /* 날짜 이동 바 */
+        .date-picker-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            background: #ffffff;
+            padding: 12px 16px;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+        }
+
+        .date-btn {
+            background: #f0f4f9;
+            border: none;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            font-size: 1rem;
+            cursor: pointer;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .date-btn:active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .sync-notice {
+            font-size: 0.75rem;
+            text-align: center;
+            color: var(--text-muted);
+            margin: 15px 4px 0 4px;
+            background: #e9ecef;
+            padding: 8px 12px;
+            border-radius: 8px;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 고정 헤더 -->
+    <header>
+        <div class="header-title">🏡 우리 가족 실시간 보드</div>
+        <div class="header-sub" id="currentMemberNotice">작성자: 첫째 👦</div>
+    </header>
+
+    <!-- 6명 가족 프로필 가로 스크롤 선택 바 -->
+    <div class="member-bar-wrapper">
+        <div class="member-bar-label">👇 작성하시는 가족 멤버를 선택하세요</div>
+        <div class="member-bar" id="memberBar">
+            <!-- JS dynamic render -->
+        </div>
+    </div>
+
+    <!-- 탭 내비게이션 -->
+    <nav>
+        <button class="tab-btn active" onclick="switchTab('schedule')">📅 오늘의 변동 시간표</button>
+        <button class="tab-btn" onclick="switchTab('shopping')">🛍️ 준비물 & 구매 요청</button>
+    </nav>
+
+    <main>
+        <!-- 탭 1: 오늘 변동 시간표 -->
+        <div id="scheduleTab" class="tab-content active">
+            <div class="date-picker-bar">
+                <button class="date-btn" onclick="changeDate(-1)">◀</button>
+                <strong id="currentDateText" style="font-size: 0.95rem; color: var(--primary-dark);">2026-11-08 (오늘)</strong>
+                <button class="date-btn" onclick="changeDate(1)">▶</button>
+            </div>
+
+            <div class="card">
+                <div class="card-title">➕ 새로운 학원/일정 등록</div>
+                <p style="font-size:0.78rem; color:var(--text-muted); margin-top:4px; margin-bottom:12px;">시간이 자주 바뀔 때 즉시 입력하세요!</p>
+                <div class="input-group">
+                    <div style="display:flex; gap:8px;">
+                        <span style="font-size:0.85rem; font-weight:bold; align-self:center; min-width:40px; color:var(--primary);">시간:</span>
+                        <input type="time" id="schedTime">
+                    </div>
+                    <input type="text" id="schedTitle" placeholder="예: 피아노 학원, 영수학원 픽업">
+                </div>
+                <button class="btn" onclick="addSchedule()">➕ 시간표 추가하기</button>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">⏰ 오늘의 실시간 일정 목록</div>
+                    <button class="btn-sm" style="background:#e9ecef; color:#495057;" onclick="loadSchedules()">🔄 새로고침</button>
+                </div>
+                <div id="scheduleList">
+                    <!-- 일정 목록 render -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 탭 2: 아이들 준비물 & 주문 요청 -->
+        <div id="shoppingTab" class="tab-content">
+            <div class="card">
+                <div class="card-title">📝 준비물 / 필요한 물건 요청</div>
+                <p style="font-size:0.78rem; color:var(--text-muted); margin-top:4px; margin-bottom:12px;">아이가 물건을 등록하면 부모님이 확인 후 구매합니다!</p>
+                <div class="input-group">
+                    <input type="text" id="shopItem" placeholder="물품명 (예: 5학년 사회 한지, 삼다수 생수)">
+                    <input type="text" id="shopMemo" placeholder="수량/메모 (예: 2세트, 쿠팡 로켓배송)">
+                </div>
+                <button class="btn" onclick="addShoppingItem()" style="background:#2ecc71;">🛒 구매 요청 등록하기</button>
+            </div>
+
+            <div class="card">
+                <div class="card-header" style="flex-direction:column; align-items:flex-start; gap:8px;">
+                    <div class="card-title">🛒 가족 구매 요청 목록</div>
+                    <div style="display:flex; gap:6px; width:100%;">
+                        <button class="btn-sm" style="flex:1; background:#e9ecef; color:#333;" onclick="filterShopping('all')">전체보기</button>
+                        <button class="btn-sm" style="flex:1; background:#fff3cd; color:#856404;" onclick="filterShopping('pending')">⏳ 주문대기</button>
+                        <button class="btn-sm" style="flex:1; background:#d4edda; color:#155724;" onclick="filterShopping('ordered')">✅ 주문완료</button>
+                    </div>
+                </div>
+                <div id="shoppingList" style="margin-top:10px;">
+                    <!-- 쇼핑 목록 render -->
+                </div>
+            </div>
+        </div>
+
+        <div class="sync-notice">
+            💡 실시간 자동 공유: 온 가족의 핸드폰 브라우저(LocalStorage)를 통해 등록한 내용이 실시간으로 안전하게 반영됩니다.
+        </div>
+    </main>
+
+    <script>
+        // 6명 가족 멤버 정의 (아바타 및 시각화 고유 색상)
+        const familyMembers = [
+            { id: 'mom', name: '엄마', emoji: '👩', color: '#ff6b6b' },
+            { id: 'dad', name: '아빠', emoji: '👨', color: '#4d96ff' },
+            { id: 'child1', name: '첫째', emoji: '👦', color: '#2ecc71' },
+            { id: 'child2', name: '둘째', emoji: '👧', color: '#f1c40f' },
+            { id: 'child3', name: '셋째', emoji: '🧒', color: '#e67e22' },
+            { id: 'child4', name: '막내', emoji: '👶', color: '#9b59b6' }
+        ];
+
+        let currentMember = familyMembers[2]; // 기본 선택: 첫째
+        let selectedDate = new Date();
+        let currentFilter = 'all';
+
+        function formatDate(d) {
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}`;
+        }
+
+        window.onload = function() {
+            renderMemberBar();
+            updateDateDisplay();
+            loadSchedules();
+            loadShoppingList();
+
+            // 다른 탭/창에서 데이터 변경 시 동기화
+            window.addEventListener('storage', function(e) {
+                if (e.key === 'family_schedules') loadSchedules();
+                if (e.key === 'family_shopping') loadShoppingList();
+            });
+        };
+
+        function renderMemberBar() {
+            const bar = document.getElementById('memberBar');
+            bar.innerHTML = '';
+            familyMembers.forEach(m => {
+                const chip = document.createElement('div');
+                chip.className = `member-chip ${m.id === currentMember.id ? 'active' : ''}`;
+                chip.onclick = () => selectMember(m);
+                chip.innerHTML = `
+                    <div class="avatar" style="border: 2px solid ${m.color};">${m.emoji}</div>
+                    <div class="member-name" style="color: ${m.color}">${m.name}</div>
+                `;
+                bar.appendChild(chip);
+            });
+            document.getElementById('currentMemberNotice').innerText = `작성자: ${currentMember.name} ${currentMember.emoji}`;
+        }
+
+        function selectMember(member) {
+            currentMember = member;
+            renderMemberBar();
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+            if (tab === 'schedule') {
+                document.querySelectorAll('.tab-btn')[0].classList.add('active');
+                document.getElementById('scheduleTab').classList.add('active');
+            } else {
+                document.querySelectorAll('.tab-btn')[1].classList.add('active');
+                document.getElementById('shoppingTab').classList.add('active');
+            }
+        }
+
+        function changeDate(days) {
+            selectedDate.setDate(selectedDate.getDate() + days);
+            updateDateDisplay();
+            loadSchedules();
+        }
+
+        function updateDateDisplay() {
+            const todayStr = formatDate(new Date());
+            const selStr = formatDate(selectedDate);
+            let label = selStr;
+            if (selStr === todayStr) label += " (오늘)";
+            document.getElementById('currentDateText').innerText = label;
+        }
+
+        /* --- 1. 변동 시간표 로직 --- */
+        function getSchedulesFromStorage() {
+            return JSON.parse(localStorage.getItem('family_schedules') || '[]');
+        }
+
+        function saveSchedulesToStorage(data) {
+            localStorage.setItem('family_schedules', JSON.stringify(data));
+        }
+
+        function addSchedule() {
+            const time = document.getElementById('schedTime').value;
+            const title = document.getElementById('schedTitle').value.trim();
+
+            if (!time || !title) {
+                alert('시간과 일정 내용을 입력해 주세요!');
+                return;
+            }
+
+            const schedules = getSchedulesFromStorage();
+            schedules.push({
+                id: Date.now(),
+                date: formatDate(selectedDate),
+                time: time,
+                title: title,
+                memberId: currentMember.id,
+                memberName: currentMember.name,
+                memberEmoji: currentMember.emoji,
+                memberColor: currentMember.color
+            });
+
+            schedules.sort((a, b) => a.time.localeCompare(b.time));
+            saveSchedulesToStorage(schedules);
+            document.getElementById('schedTitle').value = '';
+            loadSchedules();
+        }
+
+        function loadSchedules() {
+            const schedules = getSchedulesFromStorage();
+            const dateStr = formatDate(selectedDate);
+            const todaySchedules = schedules.filter(s => s.date === dateStr);
+
+            const container = document.getElementById('scheduleList');
+            container.innerHTML = '';
+
+            if (todaySchedules.length === 0) {
+                container.innerHTML = '<div style="text-align:center; color:#999; padding:25px 0; font-size:0.85rem;">등록된 학원/일정이 없습니다.</div>';
+                return;
+            }
+
+            todaySchedules.forEach(item => {
+                const el = document.createElement('div');
+                el.className = 'schedule-item';
+                el.innerHTML = `
+                    <div class="schedule-time">${item.time}</div>
+                    <span class="schedule-tag" style="background-color: ${item.memberColor}">${item.memberEmoji} ${item.memberName}</span>
+                    <div class="schedule-title">${item.title}</div>
+                    <button class="delete-btn" onclick="deleteSchedule(${item.id})">✕</button>
+                `;
+                container.appendChild(el);
+            });
+        }
+
+        function deleteSchedule(id) {
+            let schedules = getSchedulesFromStorage();
+            schedules = schedules.filter(s => s.id !== id);
+            saveSchedulesToStorage(schedules);
+            loadSchedules();
+        }
+
+        /* --- 2. 쇼핑/준비물 요청 로직 --- */
+        function getShoppingFromStorage() {
+            return JSON.parse(localStorage.getItem('family_shopping') || '[]');
+        }
+
+        function saveShoppingToStorage(data) {
+            localStorage.setItem('family_shopping', JSON.stringify(data));
+        }
+
+        function addShoppingItem() {
+            const item = document.getElementById('shopItem').value.trim();
+            const memo = document.getElementById('shopMemo').value.trim();
+
+            if (!item) {
+                alert('필요한 물건 이름을 입력해 주세요!');
+                return;
+            }
+
+            const shoppingList = getShoppingFromStorage();
+            shoppingList.unshift({
+                id: Date.now(),
+                item: item,
+                memo: memo,
+                requesterId: currentMember.id,
+                requesterName: currentMember.name,
+                requesterEmoji: currentMember.emoji,
+                requesterColor: currentMember.color,
+                status: 'pending',
+                createdAt: new Date().toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+            });
+
+            saveShoppingToStorage(shoppingList);
+            document.getElementById('shopItem').value = '';
+            document.getElementById('shopMemo').value = '';
+            loadShoppingList();
+        }
+
+        function filterShopping(filter) {
+            currentFilter = filter;
+            loadShoppingList();
+        }
+
+        function loadShoppingList() {
+            let list = getShoppingFromStorage();
+            const container = document.getElementById('shoppingList');
+            container.innerHTML = '';
+
+            if (currentFilter === 'pending') {
+                list = list.filter(i => i.status === 'pending');
+            } else if (currentFilter === 'ordered') {
+                list = list.filter(i => i.status === 'ordered');
+            }
+
+            if (list.length === 0) {
+                container.innerHTML = '<div style="text-align:center; color:#999; padding:25px 0; font-size:0.85rem;">요청된 구매 목록이 없습니다.</div>';
+                return;
+            }
+
+            list.forEach(item => {
+                const isOrdered = item.status === 'ordered';
+                const el = document.createElement('div');
+                el.className = `shopping-item ${isOrdered ? 'ordered' : ''}`;
+                el.innerHTML = `
+                    <div class="shopping-header">
+                        <div class="shopping-title">${item.item}</div>
+                        <button class="delete-btn" onclick="deleteShoppingItem(${item.id})">✕</button>
+                    </div>
+                    <div class="shopping-meta">
+                        <span class="schedule-tag" style="background-color:${item.requesterColor}; padding:1px 6px;">${item.requesterEmoji} ${item.requesterName}</span>
+                        <span>${item.memo ? '• ' + item.memo : ''}</span>
+                        <span style="color:#aaa;">(${item.createdAt})</span>
+                    </div>
+                    <div class="shopping-actions">
+                        <button class="status-badge ${isOrdered ? 'completed' : 'pending'}" onclick="toggleShoppingStatus(${item.id})">
+                            ${isOrdered ? '✅ 주문완료 (누르면 취소)' : '⏳ 주문대기 (누르면 완료)'}
+                        </button>
+                    </div>
+                `;
+                container.appendChild(el);
+            });
+        }
+
+        function toggleShoppingStatus(id) {
+            const list = getShoppingFromStorage();
+            const target = list.find(i => i.id === id);
+            if (target) {
+                target.status = target.status === 'pending' ? 'ordered' : 'pending';
+                saveShoppingToStorage(list);
+                loadShoppingList();
+            }
+        }
+
+        function deleteShoppingItem(id) {
+            let list = getShoppingFromStorage();
+            list = list.filter(i => i.id !== id);
+            saveShoppingToStorage(list);
+            loadShoppingList();
+        }
+    </script>
+</body>
+</html>
